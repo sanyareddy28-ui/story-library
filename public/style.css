@@ -16,7 +16,8 @@ input[type=text],input[type=password],input[type=search],select,textarea{width:1
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);padding:.35rem .8rem}
 .btn:disabled{opacity:.6;cursor:wait}
-.story{display:grid;gap:.35rem;padding:1.4rem 0;border-top:1px solid var(--line)}
+.story{display:grid;grid-template-columns:110px 1fr;gap:1.2rem;padding:1.4rem 0;border-top:1px solid var(--line)}
+.info{display:grid;gap:.35rem;align-content:start;min-width:0}
 .story h2{font:600 1.7rem/1.2 "Newsreader",Georgia,serif;margin:0}
 .story h2 button{all:unset;cursor:pointer}
 .story h2 button:hover{color:var(--accent);text-decoration:underline}
@@ -38,3 +39,12 @@ label{display:grid;gap:.3rem;font-weight:600}
 label small{font-weight:400;color:var(--muted)}
 .msg{min-height:1.5rem;font-weight:600}.msg.err{color:var(--danger)}.msg.ok{color:var(--accent)}
 footer{padding:2rem 0 3rem;color:var(--muted);font-size:.9rem}
+
+.cover{width:110px;aspect-ratio:2/3;object-fit:cover;border-radius:4px;background:#D9E3E6;display:block;box-shadow:0 2px 8px rgba(27,36,51,.18)}
+.cover.ph{display:grid;place-items:center;font:600 2.6rem "Newsreader",Georgia,serif;color:var(--accent)}
+.rleft{display:flex;gap:1rem;align-items:flex-start}
+.rcover{width:64px;aspect-ratio:2/3;object-fit:cover;border-radius:4px;box-shadow:0 2px 8px rgba(27,36,51,.18)}
+.sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.btn.small{padding:.35rem .8rem;font-weight:600}
+@media(max-width:520px){.story{grid-template-columns:84px 1fr;gap:.9rem}.cover{width:84px}.cover.ph{font-size:2rem}}

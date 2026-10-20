@@ -28,6 +28,7 @@
       <label>Genre <small>Optional, for example Mystery or Romance</small><input type="text" name="genre" maxlength="40"></label>
       <label>Short description <small>Up to 500 characters</small><textarea name="description" rows="3" maxlength="500"></textarea></label>
       <label>Story file <small>.txt, .md, .pdf or .docx, up to 4 MB</small><input type="file" name="file" accept=".txt,.md,.pdf,.docx" required></label>
+      <label>Cover photo <small>Optional. JPG, PNG or WebP. It is resized automatically.</small><input type="file" name="cover" accept="image/*"></label>
       <div><button class="btn" type="submit" id="upBtn">Publish story</button> <button class="btn ghost" type="button" id="out">Sign out</button></div>
       <div class="msg" id="upMsg" role="status"></div>
     </form>
@@ -53,10 +54,26 @@ async function signIn(pw) {
 async function refresh() {
   const stories = await (await fetch("/api/stories")).json();
   $("#list").innerHTML = stories.length ? stories.map(s => `
-    <div class="story"><h2>${esc(s.title)}</h2>
+    <div class="story">${cover(s)}<div class="info"><h2>${esc(s.title)}</h2>
       <div class="by">by <b>${esc(s.author)}</b> · ${esc(s.filename)}</div>
-      <div class="row-actions"><button class="btn danger" data-del="${esc(s.id)}">Delete</button></div></div>`).join("")
+      <div class="row-actions">
+        <label class="btn ghost small">${s.hasCover ? "Change cover" : "Add cover"}<input class="sr" type="file" accept="image/*" data-cover="${esc(s.id)}"></label>
+        <button class="btn danger" data-del="${esc(s.id)}">Delete</button></div></div></div>`).join("")
     : '<p class="empty">Nothing published yet.</p>';
+}
+
+const cover = s => s.hasCover
+  ? `<img class="cover" src="/api/stories/${esc(s.id)}/cover?v=${s.cv}" alt="">`
+  : `<div class="cover ph" aria-hidden="true">${esc([...s.title][0] || "")}</div>`;
+
+// Shrink a photo to at most 800 px on its longest side and save it as JPEG
+async function shrink(file) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, 800 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, "image/jpeg", 0.85));
 }
 
 $("#login").addEventListener("submit", async e => {
@@ -68,7 +85,14 @@ $("#login").addEventListener("submit", async e => {
 $("#up").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = $("#upBtn"); btn.disabled = true; say($("#upMsg"), "Uploading…");
-  const r = await fetch("/api/stories", { method: "POST", headers: { "x-admin-password": key() }, body: new FormData(e.target) });
+  const fd = new FormData(e.target);
+  try {
+    const cv = fd.get("cover"); fd.delete("cover");
+    if (cv && cv.size) fd.append("cover", await shrink(cv), "cover.jpg");
+  } catch {
+    btn.disabled = false; say($("#upMsg"), "Could not read that photo. Try a JPG or PNG.", "err"); return;
+  }
+  const r = await fetch("/api/stories", { method: "POST", headers: { "x-admin-password": key() }, body: fd });
   const d = await r.json().catch(() => ({}));
   btn.disabled = false;
   if (r.ok) { e.target.reset(); say($("#upMsg"), "Published. It is now live on the library page.", "ok"); refresh(); }
@@ -79,6 +103,16 @@ $("#list").addEventListener("click", async e => {
   const id = e.target.dataset.del; if (!id || !confirm("Delete this story permanently?")) return;
   await fetch("/api/stories/" + id, { method: "DELETE", headers: { "x-admin-password": key() } });
   refresh();
+});
+
+$("#list").addEventListener("change", async e => {
+  const id = e.target.dataset.cover, f = e.target.files && e.target.files[0];
+  if (!id || !f) return;
+  try {
+    const r = await fetch(`/api/stories/${id}/cover`, { method: "PUT", headers: { "x-admin-password": key() }, body: await shrink(f) });
+    if (!r.ok) throw 0;
+    refresh();
+  } catch { alert("Could not set the cover. Try a JPG or PNG photo."); }
 });
 
 $("#out").addEventListener("click", () => { sessionStorage.removeItem("pw"); location.reload(); });

@@ -26,7 +26,7 @@
 
 <dialog id="reader">
   <div class="rhead">
-    <div><h2 id="rTitle"></h2><div class="by" id="rMeta"></div></div>
+    <div class="rleft"><img id="rCover" class="rcover" alt="" hidden><div><h2 id="rTitle"></h2><div class="by" id="rMeta"></div></div></div>
     <div class="row-actions">
       <a class="btn ghost" id="rDl" href="#">Download</a>
       <button class="btn" id="rClose">Close</button>
@@ -45,6 +45,10 @@ $("#siteName").textContent = SITE.name;
 $("#tagline").textContent = SITE.tagline;
 $("#year").textContent = `© ${new Date().getFullYear()} ${SITE.name}`;
 
+const cover = s => s.hasCover
+  ? `<img class="cover" src="/api/stories/${esc(s.id)}/cover?v=${s.cv}" alt="Cover of ${esc(s.title)}" loading="lazy">`
+  : `<div class="cover ph" aria-hidden="true">${esc([...s.title][0] || "")}</div>`;
+
 async function load() {
   try {
     const r = await fetch("/api/stories");
@@ -62,11 +66,12 @@ function render() {
     (!q || [s.title, s.author, s.description].join(" ").toLowerCase().includes(q)));
   $("#list").innerHTML = rows.length ? rows.map(s => `
     <article class="story">
+      ${cover(s)}<div class="info">
       <h2><button data-open="${esc(s.id)}">${esc(s.title)}</button></h2>
       <div class="by">by <b>${esc(s.author)}</b> · ${new Date(s.created).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})} · ${esc(s.ext)} · ${Math.max(1,Math.round(s.size/1024))} KB</div>
       ${s.description ? `<p>${esc(s.description)}</p>` : ""}
       <div class="row-actions">${s.genre ? `<span class="tag">${esc(s.genre)}</span>` : ""}
-        <a href="/api/stories/${esc(s.id)}?download=1">Download</a></div>
+        <a href="/api/stories/${esc(s.id)}?download=1">Download</a></div></div>
     </article>`).join("")
     : `<p class="empty">${stories.length ? "No stories match your search." : "No stories yet. Check back soon."}</p>`;
 }
@@ -76,6 +81,9 @@ async function openStory(id) {
   $("#rTitle").textContent = s.title;
   $("#rMeta").textContent = `by ${s.author}` + (s.genre ? `, ${s.genre}` : "");
   $("#rDl").href = `/api/stories/${id}?download=1`;
+  const rc = $("#rCover");
+  rc.hidden = !s.hasCover;
+  if (s.hasCover) rc.src = `/api/stories/${id}/cover?v=${s.cv}`;
   const body = $("#rBody"); body.replaceChildren();
   if (s.ext === "txt" || s.ext === "md") {
     const d = document.createElement("div"); d.className = "prose";
