@@ -19,6 +19,7 @@
     <p id="tagline"></p>
     <div class="search"><input type="search" id="q" placeholder="Search by title, author or keyword" aria-label="Search stories"></div>
     <div class="stats" id="stats"></div>
+    <div class="store" id="store" hidden><span id="storeText"></span><a class="btn amz" id="storeLink" target="_blank" rel="noopener noreferrer"></a></div>
   </div>
 </header>
 
@@ -31,11 +32,11 @@
   <div id="list" aria-live="polite"></div>
 </main>
 
-<footer class="foot shell"><div id="about"></div><div id="year"></div></footer>
+<footer class="foot shell"><div id="about"></div><div id="footStore"></div><div id="year"></div></footer>
 
 <dialog id="reader">
   <div class="rhead">
-    <div class="rleft"><img id="rCover" class="rcover" alt="" hidden><div><h2 id="rTitle"></h2><div class="by" id="rMeta"></div></div></div>
+    <div class="rleft"><img id="rCover" class="rcover" alt="" hidden><div><h2 id="rTitle"></h2><div class="by" id="rMeta"></div><a class="rstore" id="rStore" target="_blank" rel="noopener noreferrer" hidden></a></div></div>
     <div class="row-actions">
       <a class="btn ghost" id="rDl" href="#">Download</a>
       <button class="btn" id="rClose">Close</button>
@@ -57,11 +58,26 @@ $("#siteName").textContent = SITE.name;
 $("#tagline").textContent = SITE.tagline;
 $("#about").textContent = SITE.about || "";
 $("#year").textContent = `© ${new Date().getFullYear()} ${SITE.name}`;
+const st = SITE.store;
+if (st && st.url) {
+  const label = st.label || "Buy on Amazon.in";
+  $("#storeText").textContent = st.text || "";
+  const a = $("#storeLink"); a.href = st.url; a.textContent = label;
+  $("#store").hidden = false;
+  $("#footStore").innerHTML = `<a href="${esc(st.url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+}
 if (SITE.heroImage) {
   $("#hero").style.backgroundImage = `url("${SITE.heroImage}")`;
   $("#hero").classList.add("img");
   $("#art").hidden = true;
 }
+
+const amazonLink = s => {
+  const st = SITE.store; if (!st || !st.url) return "";
+  try { return new URL(st.url).origin + "/s?k=" + encodeURIComponent(s.title + " " + s.author); } catch { return ""; }
+};
+const buyLabel = () => (SITE.store && SITE.store.label) || "Buy on Amazon.in";
+const buy = (s, cls = "buy") => { const u = amazonLink(s); return u ? `<a class="${cls}" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(buyLabel())}</a>` : ""; };
 
 function book(s) {
   if (s.hasCover) return `<img class="bk" src="/api/stories/${esc(s.id)}/cover?v=${s.cv}" alt="Cover of ${esc(s.title)}" loading="lazy">`;
@@ -76,7 +92,7 @@ function feat(s) {
       <div class="by">by <b>${esc(s.author)}</b> · ${fmt(s.created)}${s.genre ? " · " + esc(s.genre) : ""}</div>
       ${s.description ? `<p>${esc(s.description)}</p>` : ""}
       <div class="row-actions"><button class="btn" data-open="${esc(s.id)}">Read now</button>
-        <a class="btn ghost" href="/api/stories/${esc(s.id)}?download=1">Download</a></div></div></section>`;
+        <a class="btn ghost" href="/api/stories/${esc(s.id)}?download=1">Download</a>${buy(s, "btn amz")}</div></div></section>`;
 }
 
 function chips() {
@@ -99,9 +115,9 @@ function render() {
   if (!rows.length && !spot) { $("#list").innerHTML = '<p class="note">No stories match your search.</p>'; return; }
   $("#list").innerHTML = rows.length
     ? `<h2 class="sec">${spot ? "More stories" : "Stories"}</h2><div class="grid">${rows.map(s => `
-      <button class="card" data-open="${esc(s.id)}">${book(s)}
+      <div class="card"><button class="card-btn" data-open="${esc(s.id)}">${book(s)}
         <span class="ct">${esc(s.title)}</span><span class="ca">${esc(s.author)}</span>
-        ${s.genre ? `<span class="tag">${esc(s.genre)}</span>` : ""}</button>`).join("")}</div>`
+        ${s.genre ? `<span class="tag">${esc(s.genre)}</span>` : ""}</button>${buy(s)}</div>`).join("")}</div>`
     : "";
 }
 
@@ -119,6 +135,9 @@ async function openStory(id) {
   $("#rDl").href = `/api/stories/${id}?download=1`;
   const rc = $("#rCover");
   rc.hidden = !s.hasCover;
+  const ru = amazonLink(s), rs = $("#rStore");
+  rs.hidden = !ru;
+  if (ru) { rs.href = ru; rs.textContent = buyLabel() + " →"; }
   if (s.hasCover) rc.src = `/api/stories/${id}/cover?v=${s.cv}`;
   const body = $("#rBody"); body.replaceChildren();
   if (s.ext === "txt" || s.ext === "md") {

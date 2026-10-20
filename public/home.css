@@ -31,14 +31,24 @@
 .bar select{width:auto}
 .sec{font:600 1.6rem "Newsreader",Georgia,serif;margin:1.5rem 0 1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.8rem 1.25rem;padding-bottom:3rem}
-.card{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:.25rem;align-content:start}
-.card .bk{transition:transform .18s,box-shadow .18s;margin-bottom:.5rem}
-.card:hover .bk,.card:focus-visible .bk{transform:translateY(-4px);box-shadow:0 12px 26px rgba(20,32,48,.3)}
-.card:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
+.card{display:grid;gap:.45rem;align-content:start}
+.card-btn{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:.25rem;align-content:start}
+.card-btn .bk{transition:transform .18s,box-shadow .18s;margin-bottom:.5rem}
+.card-btn:hover .bk,.card-btn:focus-visible .bk{transform:translateY(-4px);box-shadow:0 12px 26px rgba(20,32,48,.3)}
+.card-btn:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
 .ct{font:600 1.15rem/1.25 "Newsreader",Georgia,serif}
 .ca{color:var(--muted);font-size:.92rem}
-.card .tag{justify-self:start;margin:.2rem 0 0}
+.card-btn .tag{justify-self:start;margin:.2rem 0 0}
 .note{padding:3rem 0;color:var(--muted);font-size:1.1rem}
 .foot{border-top:1px solid var(--line);padding:2rem 1.25rem 3rem;color:var(--muted);display:grid;gap:.3rem}
-@media(prefers-reduced-motion:reduce){.card .bk{transition:none}}
+@media(prefers-reduced-motion:reduce){.card-btn .bk{transition:none}}
 @media(max-width:620px){.hero{padding:3rem 0 6.5rem}.feat{grid-template-columns:110px 1fr;gap:1rem;padding:1rem;align-items:start}.feat .bk{width:110px}.bk.ph{font-size:2.2rem}}
+
+.store{margin-top:1.2rem;display:flex;gap:.9rem;align-items:center;flex-wrap:wrap}
+.store span{font-weight:600}
+.btn.amz{background:#F3B33D;color:#1B2433}
+.rstore{display:inline-block;margin-top:.35rem;font-weight:600}
+dialog#reader[open]{display:flex;flex-direction:column}
+.rbody{height:auto;flex:1;min-height:0}
+
+.buy{font-weight:600;font-size:.92rem;color:var(--accent)}

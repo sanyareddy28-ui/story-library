@@ -48,6 +48,7 @@ footer{padding:2rem 0 3rem;color:var(--muted);font-size:.9rem}
 .btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 .btn.small{padding:.35rem .8rem;font-weight:600}
 @media(max-width:520px){.story{grid-template-columns:84px 1fr;gap:.9rem}.cover{width:84px}.cover.ph{font-size:2rem}}
-   :root{color-scheme:light}
-   input,select,textarea{color:#1B2433}
-   ::placeholder{color:#6B778A;opacity:1}
+
+:root{color-scheme:light}
+input,select,textarea{color:#1B2433}
+::placeholder{color:#6B778A;opacity:1}
