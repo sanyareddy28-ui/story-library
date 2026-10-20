@@ -13,7 +13,7 @@
 </head>
 <body>
 <header class="hero" id="hero">
-  <div class="spines" id="spines" aria-hidden="true"></div>
+  <div class="shell artwrap" aria-hidden="true"><img class="art" id="art" src="/hero.svg" alt=""></div>
   <div class="shell">
     <h1 id="siteName"></h1>
     <p id="tagline"></p>
@@ -60,10 +60,7 @@ $("#year").textContent = `© ${new Date().getFullYear()} ${SITE.name}`;
 if (SITE.heroImage) {
   $("#hero").style.backgroundImage = `url("${SITE.heroImage}")`;
   $("#hero").classList.add("img");
-} else {
-  const cols = ["#0F5C63","#6B2E5F","#8A5A2B","#2F5D8A","#3F6B4A","#C9A24B"];
-  $("#spines").innerHTML = Array.from({ length: 60 }, (_, i) =>
-    `<i style="height:${40 + (i * 37) % 55}px;width:${14 + (i * 13) % 16}px;background:${cols[i % cols.length]}"></i>`).join("");
+  $("#art").hidden = true;
 }
 
 function book(s) {
