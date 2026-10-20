@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/home.css">
+<script src="/config.js"></script>
+</head>
+<body>
+<header class="hero" id="hero">
+  <div class="spines" id="spines" aria-hidden="true"></div>
+  <div class="shell">
+    <h1 id="siteName"></h1>
+    <p id="tagline"></p>
+    <div class="search"><input type="search" id="q" placeholder="Search by title, author or keyword" aria-label="Search stories"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<main class="shell">
+  <div id="featured"></div>
+  <div class="bar" id="bar" hidden>
+    <div class="chips" id="chips" role="group" aria-label="Filter by genre"></div>
+    <select id="sort" aria-label="Sort stories"><option value="new">Newest first</option><option value="az">Title A to Z</option></select>
+  </div>
+  <div id="list" aria-live="polite"></div>
+</main>
+
+<footer class="foot shell"><div id="about"></div><div id="year"></div></footer>
+
+<dialog id="reader">
+  <div class="rhead">
+    <div class="rleft"><img id="rCover" class="rcover" alt="" hidden><div><h2 id="rTitle"></h2><div class="by" id="rMeta"></div></div></div>
+    <div class="row-actions">
+      <a class="btn ghost" id="rDl" href="#">Download</a>
+      <button class="btn" id="rClose">Close</button>
+    </div>
+  </div>
+  <div class="rbody" id="rBody"></div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const PAL = [["#0F5C63","#14303A"],["#6B2E5F","#2A1F3D"],["#8A5A2B","#3B2A1A"],["#2F5D8A","#1B2D45"],["#3F6B4A","#1B3325"]];
+const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+const fmt = t => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+let stories = [], genre = "";
+
+document.title = SITE.name;
+$("#siteName").textContent = SITE.name;
+$("#tagline").textContent = SITE.tagline;
+$("#about").textContent = SITE.about || "";
+$("#year").textContent = `© ${new Date().getFullYear()} ${SITE.name}`;
+if (SITE.heroImage) {
+  $("#hero").style.backgroundImage = `url("${SITE.heroImage}")`;
+  $("#hero").classList.add("img");
+} else {
+  const cols = ["#0F5C63","#6B2E5F","#8A5A2B","#2F5D8A","#3F6B4A","#C9A24B"];
+  $("#spines").innerHTML = Array.from({ length: 60 }, (_, i) =>
+    `<i style="height:${40 + (i * 37) % 55}px;width:${14 + (i * 13) % 16}px;background:${cols[i % cols.length]}"></i>`).join("");
+}
+
+function book(s) {
+  if (s.hasCover) return `<img class="bk" src="/api/stories/${esc(s.id)}/cover?v=${s.cv}" alt="Cover of ${esc(s.title)}" loading="lazy">`;
+  const [a, b] = PAL[hash(s.title) % PAL.length];
+  return `<div class="bk ph" style="background:linear-gradient(160deg,${a},${b})" aria-hidden="true"><span>${esc([...s.title][0] || "")}</span></div>`;
+}
+
+function feat(s) {
+  return `<section class="feat" aria-label="Latest story">${book(s)}
+    <div><span class="eyebrow">Latest story</span>
+      <h2>${esc(s.title)}</h2>
+      <div class="by">by <b>${esc(s.author)}</b> · ${fmt(s.created)}${s.genre ? " · " + esc(s.genre) : ""}</div>
+      ${s.description ? `<p>${esc(s.description)}</p>` : ""}
+      <div class="row-actions"><button class="btn" data-open="${esc(s.id)}">Read now</button>
+        <a class="btn ghost" href="/api/stories/${esc(s.id)}?download=1">Download</a></div></div></section>`;
+}
+
+function chips() {
+  const gs = [...new Set(stories.map(s => s.genre).filter(Boolean))].sort();
+  $("#chips").innerHTML = ["", ...gs].map(g =>
+    `<button class="chip" data-g="${esc(g)}" aria-pressed="${g === genre}">${g ? esc(g) : "All"}</button>`).join("");
+  $("#bar").hidden = !stories.length;
+}
+
+function render() {
+  const q = $("#q").value.trim().toLowerCase();
+  let rows = stories.filter(s => (!genre || s.genre === genre) &&
+    (!q || [s.title, s.author, s.description, s.genre].join(" ").toLowerCase().includes(q)));
+  if ($("#sort").value === "az") rows = [...rows].sort((a, b) => a.title.localeCompare(b.title));
+  const spot = !q && !genre && stories.length > 0;
+  $("#featured").innerHTML = spot ? feat(stories[0]) : "";
+  if (spot) rows = rows.filter(s => s.id !== stories[0].id);
+
+  if (!stories.length) { $("#list").innerHTML = '<p class="note">No stories yet. Please check back soon.</p>'; return; }
+  if (!rows.length && !spot) { $("#list").innerHTML = '<p class="note">No stories match your search.</p>'; return; }
+  $("#list").innerHTML = rows.length
+    ? `<h2 class="sec">${spot ? "More stories" : "Stories"}</h2><div class="grid">${rows.map(s => `
+      <button class="card" data-open="${esc(s.id)}">${book(s)}
+        <span class="ct">${esc(s.title)}</span><span class="ca">${esc(s.author)}</span>
+        ${s.genre ? `<span class="tag">${esc(s.genre)}</span>` : ""}</button>`).join("")}</div>`
+    : "";
+}
+
+async function load() {
+  try { const r = await fetch("/api/stories"); stories = r.ok ? await r.json() : []; } catch { stories = []; }
+  const n = stories.length, a = new Set(stories.map(s => s.author)).size;
+  $("#stats").textContent = n ? `${n} ${n === 1 ? "story" : "stories"} · ${a} ${a === 1 ? "author" : "authors"}` : "";
+  chips(); render();
+}
+
+async function openStory(id) {
+  const s = stories.find(x => x.id === id); if (!s) return;
+  $("#rTitle").textContent = s.title;
+  $("#rMeta").textContent = `by ${s.author}` + (s.genre ? `, ${s.genre}` : "");
+  $("#rDl").href = `/api/stories/${id}?download=1`;
+  const rc = $("#rCover");
+  rc.hidden = !s.hasCover;
+  if (s.hasCover) rc.src = `/api/stories/${id}/cover?v=${s.cv}`;
+  const body = $("#rBody"); body.replaceChildren();
+  if (s.ext === "txt" || s.ext === "md") {
+    const d = document.createElement("div"); d.className = "prose";
+    d.textContent = "Loading…"; body.append(d);
+    d.textContent = await (await fetch(`/api/stories/${id}`)).text();
+  } else if (s.ext === "pdf") {
+    const f = document.createElement("iframe"); f.src = `/api/stories/${id}`; f.title = s.title; body.append(f);
+  } else {
+    const p = document.createElement("p");
+    p.textContent = "Word files can't be previewed in the browser. Use Download to read this story.";
+    body.append(p);
+  }
+  $("#reader").showModal();
+}
+
+$("#q").addEventListener("input", render);
+$("#sort").addEventListener("change", render);
+$("#chips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (!b) return; genre = b.dataset.g; chips(); render(); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (b) openStory(b.dataset.open); });
+$("#rClose").addEventListener("click", () => $("#reader").close());
+load();
+</script>
+</body>
+</html>
