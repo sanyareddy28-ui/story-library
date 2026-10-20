@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Manage stories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<script src="/config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1>Manage stories</h1><p><a href="/">Back to the library</a></p></header>
+
+  <form class="panel" id="login">
+    <label>Admin password<input type="password" id="pw" autocomplete="current-password" required></label>
+    <div><button class="btn" type="submit">Sign in</button></div>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+
+  <section id="admin" hidden>
+    <form class="panel" id="up">
+      <label>Story title<input type="text" name="title" maxlength="120" required></label>
+      <label>Author name<input type="text" name="author" maxlength="80" required></label>
+      <label>Genre <small>Optional, for example Mystery or Romance</small><input type="text" name="genre" maxlength="40"></label>
+      <label>Short description <small>Up to 500 characters</small><textarea name="description" rows="3" maxlength="500"></textarea></label>
+      <label>Story file <small>.txt, .md, .pdf or .docx, up to 4 MB</small><input type="file" name="file" accept=".txt,.md,.pdf,.docx" required></label>
+      <div><button class="btn" type="submit" id="upBtn">Publish story</button> <button class="btn ghost" type="button" id="out">Sign out</button></div>
+      <div class="msg" id="upMsg" role="status"></div>
+    </form>
+    <h2 style="font-family:Newsreader,Georgia,serif">Published stories</h2>
+    <div id="list"></div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const key = () => sessionStorage.getItem("pw") || "";
+const say = (el, t, cls) => { el.textContent = t; el.className = "msg " + (cls || ""); };
+
+async function signIn(pw) {
+  const r = await fetch("/api/stories?auth=1", { headers: { "x-admin-password": pw } });
+  if (!r.ok) return false;
+  sessionStorage.setItem("pw", pw);
+  $("#login").hidden = true; $("#admin").hidden = false;
+  refresh(); return true;
+}
+
+async function refresh() {
+  const stories = await (await fetch("/api/stories")).json();
+  $("#list").innerHTML = stories.length ? stories.map(s => `
+    <div class="story"><h2>${esc(s.title)}</h2>
+      <div class="by">by <b>${esc(s.author)}</b> · ${esc(s.filename)}</div>
+      <div class="row-actions"><button class="btn danger" data-del="${esc(s.id)}">Delete</button></div></div>`).join("")
+    : '<p class="empty">Nothing published yet.</p>';
+}
+
+$("#login").addEventListener("submit", async e => {
+  e.preventDefault();
+  say($("#loginMsg"), "Checking…");
+  (await signIn($("#pw").value)) ? say($("#loginMsg"), "") : say($("#loginMsg"), "Wrong password. Try again.", "err");
+});
+
+$("#up").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("#upBtn"); btn.disabled = true; say($("#upMsg"), "Uploading…");
+  const r = await fetch("/api/stories", { method: "POST", headers: { "x-admin-password": key() }, body: new FormData(e.target) });
+  const d = await r.json().catch(() => ({}));
+  btn.disabled = false;
+  if (r.ok) { e.target.reset(); say($("#upMsg"), "Published. It is now live on the library page.", "ok"); refresh(); }
+  else say($("#upMsg"), d.error || "Upload failed. Try a smaller file.", "err");
+});
+
+$("#list").addEventListener("click", async e => {
+  const id = e.target.dataset.del; if (!id || !confirm("Delete this story permanently?")) return;
+  await fetch("/api/stories/" + id, { method: "DELETE", headers: { "x-admin-password": key() } });
+  refresh();
+});
+
+$("#out").addEventListener("click", () => { sessionStorage.removeItem("pw"); location.reload(); });
+if (key()) signIn(key());
+</script>
+</body>
+</html>
